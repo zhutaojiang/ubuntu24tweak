@@ -1,0 +1,1128 @@
+{
+  "summary": {
+    "bindings": 166,
+    "actions": 136,
+    "conflicts": 0
+  },
+  "hotkeys": [
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>n"
+      ],
+      "action": "focus-active-notification",
+      "desc_zh": "聚焦当前通知"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>1"
+      ],
+      "action": "open-new-window-application-1",
+      "desc_zh": "为任务栏第1个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>2"
+      ],
+      "action": "open-new-window-application-2",
+      "desc_zh": "为任务栏第2个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>3"
+      ],
+      "action": "open-new-window-application-3",
+      "desc_zh": "为任务栏第3个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>4"
+      ],
+      "action": "open-new-window-application-4",
+      "desc_zh": "为任务栏第4个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>5"
+      ],
+      "action": "open-new-window-application-5",
+      "desc_zh": "为任务栏第5个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>6"
+      ],
+      "action": "open-new-window-application-6",
+      "desc_zh": "为任务栏第6个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>7"
+      ],
+      "action": "open-new-window-application-7",
+      "desc_zh": "为任务栏第7个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>8"
+      ],
+      "action": "open-new-window-application-8",
+      "desc_zh": "为任务栏第8个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Control>9"
+      ],
+      "action": "open-new-window-application-9",
+      "desc_zh": "为任务栏第9个应用开新窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Shift>Print"
+      ],
+      "action": "screenshot",
+      "desc_zh": "截取整个屏幕（直接存）"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Alt>Print"
+      ],
+      "action": "screenshot-window",
+      "desc_zh": "截取当前窗口"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Alt>Down"
+      ],
+      "action": "shift-overview-down",
+      "desc_zh": "向下切换概览/工作区"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super><Alt>Up"
+      ],
+      "action": "shift-overview-up",
+      "desc_zh": "向上切换概览/工作区"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Ctrl><Shift><Alt>R"
+      ],
+      "action": "show-screen-recording-ui",
+      "desc_zh": "打开录屏工具"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "Print"
+      ],
+      "action": "show-screenshot-ui",
+      "desc_zh": "打开截图工具（交互）"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>1"
+      ],
+      "action": "switch-to-application-1",
+      "desc_zh": "切换到任务栏第1个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>2"
+      ],
+      "action": "switch-to-application-2",
+      "desc_zh": "切换到任务栏第2个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>3"
+      ],
+      "action": "switch-to-application-3",
+      "desc_zh": "切换到任务栏第3个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>4"
+      ],
+      "action": "switch-to-application-4",
+      "desc_zh": "切换到任务栏第4个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>5"
+      ],
+      "action": "switch-to-application-5",
+      "desc_zh": "切换到任务栏第5个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>6"
+      ],
+      "action": "switch-to-application-6",
+      "desc_zh": "切换到任务栏第6个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>7"
+      ],
+      "action": "switch-to-application-7",
+      "desc_zh": "切换到任务栏第7个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>8"
+      ],
+      "action": "switch-to-application-8",
+      "desc_zh": "切换到任务栏第8个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>9"
+      ],
+      "action": "switch-to-application-9",
+      "desc_zh": "切换到任务栏第9个应用"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>a"
+      ],
+      "action": "toggle-application-view",
+      "desc_zh": "显示/隐藏应用程序网格"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>v",
+        "<Super>m"
+      ],
+      "action": "toggle-message-tray",
+      "desc_zh": "显示/隐藏通知中心"
+    },
+    {
+      "source": "GNOME Shell",
+      "accelerators": [
+        "<Super>s"
+      ],
+      "action": "toggle-quick-settings",
+      "desc_zh": "显示/隐藏快速设置面板"
+    },
+    {
+      "source": "Mutter",
+      "accelerators": [
+        "<Super><Shift>Escape"
+      ],
+      "action": "cancel-input-capture",
+      "desc_zh": "取消输入捕获（远控/串流）"
+    },
+    {
+      "source": "Mutter",
+      "accelerators": [
+        "XF86RotateWindows"
+      ],
+      "action": "rotate-monitor",
+      "desc_zh": "旋转显示器方向"
+    },
+    {
+      "source": "Mutter",
+      "accelerators": [
+        "<Super>p",
+        "XF86Display"
+      ],
+      "action": "switch-monitor",
+      "desc_zh": "切换显示器输出模式（投影）"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Super>Escape"
+      ],
+      "action": "restore-shortcuts",
+      "desc_zh": "恢复被应用独占的快捷键"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F1"
+      ],
+      "action": "switch-to-session-1",
+      "desc_zh": "切换到第 1 个虚拟终端 (TTY1)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F10"
+      ],
+      "action": "switch-to-session-10",
+      "desc_zh": "切换到第 10 个虚拟终端 (TTY10)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F11"
+      ],
+      "action": "switch-to-session-11",
+      "desc_zh": "切换到第 11 个虚拟终端 (TTY11)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F12"
+      ],
+      "action": "switch-to-session-12",
+      "desc_zh": "切换到第 12 个虚拟终端 (TTY12)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F2"
+      ],
+      "action": "switch-to-session-2",
+      "desc_zh": "切换到第 2 个虚拟终端 (TTY2)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F3"
+      ],
+      "action": "switch-to-session-3",
+      "desc_zh": "切换到第 3 个虚拟终端 (TTY3)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F4"
+      ],
+      "action": "switch-to-session-4",
+      "desc_zh": "切换到第 4 个虚拟终端 (TTY4)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F5"
+      ],
+      "action": "switch-to-session-5",
+      "desc_zh": "切换到第 5 个虚拟终端 (TTY5)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F6"
+      ],
+      "action": "switch-to-session-6",
+      "desc_zh": "切换到第 6 个虚拟终端 (TTY6)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F7"
+      ],
+      "action": "switch-to-session-7",
+      "desc_zh": "切换到第 7 个虚拟终端 (TTY7)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F8"
+      ],
+      "action": "switch-to-session-8",
+      "desc_zh": "切换到第 8 个虚拟终端 (TTY8)"
+    },
+    {
+      "source": "Mutter/Wayland",
+      "accelerators": [
+        "<Primary><Alt>F9"
+      ],
+      "action": "switch-to-session-9",
+      "desc_zh": "切换到第 9 个虚拟终端 (TTY9)"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Battery"
+      ],
+      "action": "battery-status-static",
+      "desc_zh": "电池状态 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Calculator"
+      ],
+      "action": "calculator-static",
+      "desc_zh": "计算器 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Tools"
+      ],
+      "action": "control-center-static",
+      "desc_zh": "控制中心 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Eject"
+      ],
+      "action": "eject-static",
+      "desc_zh": "弹出 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Mail"
+      ],
+      "action": "email-static",
+      "desc_zh": "邮件 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Suspend",
+        "XF86Hibernate"
+      ],
+      "action": "hibernate-static",
+      "desc_zh": "休眠 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Explorer"
+      ],
+      "action": "home-static",
+      "desc_zh": "主目录 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86KbdBrightnessDown"
+      ],
+      "action": "keyboard-brightness-down-static",
+      "desc_zh": "键盘亮度下 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86KbdLightOnOff"
+      ],
+      "action": "keyboard-brightness-toggle-static",
+      "desc_zh": "键盘亮度开关 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86KbdBrightnessUp"
+      ],
+      "action": "keyboard-brightness-up-static",
+      "desc_zh": "键盘亮度上 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Control><Alt>Delete"
+      ],
+      "action": "logout",
+      "desc_zh": "注销登录"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt><Super>8"
+      ],
+      "action": "magnifier",
+      "desc_zh": "放大镜开关"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt><Super>equal"
+      ],
+      "action": "magnifier-zoom-in",
+      "desc_zh": "放大镜放大"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt><Super>minus"
+      ],
+      "action": "magnifier-zoom-out",
+      "desc_zh": "放大镜缩小"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioMedia"
+      ],
+      "action": "media-static",
+      "desc_zh": "媒体 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioMicMute"
+      ],
+      "action": "mic-mute-static",
+      "desc_zh": "麦克风静音 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioNext",
+        "<Ctrl>XF86AudioNext"
+      ],
+      "action": "next-static",
+      "desc_zh": "下一个 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioPause"
+      ],
+      "action": "pause-static",
+      "desc_zh": "暂停 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioPlay",
+        "<Ctrl>XF86AudioPlay"
+      ],
+      "action": "play-static",
+      "desc_zh": "播放 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioForward"
+      ],
+      "action": "playback-forward-static",
+      "desc_zh": "播放快进 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioRandomPlay"
+      ],
+      "action": "playback-random-static",
+      "desc_zh": "播放随机 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioRepeat"
+      ],
+      "action": "playback-repeat-static",
+      "desc_zh": "播放循环 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioRewind"
+      ],
+      "action": "playback-rewind-static",
+      "desc_zh": "播放快退 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86PowerOff"
+      ],
+      "action": "power-static",
+      "desc_zh": "电源 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioPrev",
+        "<Ctrl>XF86AudioPrev"
+      ],
+      "action": "previous-static",
+      "desc_zh": "上一个 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Bluetooth"
+      ],
+      "action": "rfkill-bluetooth-static",
+      "desc_zh": "无线开关蓝牙 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86WLAN",
+        "XF86UWB",
+        "XF86RFKill"
+      ],
+      "action": "rfkill-static",
+      "desc_zh": "无线开关 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Super>o",
+        "XF86RotationLockToggle"
+      ],
+      "action": "rotate-video-lock-static",
+      "desc_zh": "旋转视频锁定 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86MonBrightnessCycle"
+      ],
+      "action": "screen-brightness-cycle-static",
+      "desc_zh": "屏幕亮度循环 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86MonBrightnessDown"
+      ],
+      "action": "screen-brightness-down-static",
+      "desc_zh": "屏幕亮度下 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86MonBrightnessUp"
+      ],
+      "action": "screen-brightness-up-static",
+      "desc_zh": "屏幕亮度上 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt><Super>s"
+      ],
+      "action": "screenreader",
+      "desc_zh": "屏幕阅读器开关"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Super>l"
+      ],
+      "action": "screensaver",
+      "desc_zh": "锁定屏幕"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86ScreenSaver"
+      ],
+      "action": "screensaver-static",
+      "desc_zh": "屏保 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Search"
+      ],
+      "action": "search-static",
+      "desc_zh": "搜索 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioStop"
+      ],
+      "action": "stop-static",
+      "desc_zh": "停止 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86Sleep"
+      ],
+      "action": "suspend-static",
+      "desc_zh": "挂起 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Primary><Alt>t"
+      ],
+      "action": "terminal",
+      "desc_zh": "打开终端"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86TouchpadOff"
+      ],
+      "action": "touchpad-off-static",
+      "desc_zh": "触摸板关 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86TouchpadOn"
+      ],
+      "action": "touchpad-on-static",
+      "desc_zh": "触摸板开 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86TouchpadToggle",
+        "<Ctrl><Super>XF86TouchpadToggle"
+      ],
+      "action": "touchpad-toggle-static",
+      "desc_zh": "触摸板开关 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Shift>XF86AudioLowerVolume",
+        "<Ctrl><Shift>XF86AudioLowerVolume"
+      ],
+      "action": "volume-down-precise-static",
+      "desc_zh": "音量下精细 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt>XF86AudioLowerVolume",
+        "<Alt><Ctrl>XF86AudioLowerVolume"
+      ],
+      "action": "volume-down-quiet-static",
+      "desc_zh": "音量下小幅 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioLowerVolume",
+        "<Ctrl>XF86AudioLowerVolume"
+      ],
+      "action": "volume-down-static",
+      "desc_zh": "音量下 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt>XF86AudioMute"
+      ],
+      "action": "volume-mute-quiet-static",
+      "desc_zh": "音量静音小幅 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioMute"
+      ],
+      "action": "volume-mute-static",
+      "desc_zh": "音量静音 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Shift>XF86AudioRaiseVolume",
+        "<Ctrl><Shift>XF86AudioRaiseVolume"
+      ],
+      "action": "volume-up-precise-static",
+      "desc_zh": "音量上精细 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "<Alt>XF86AudioRaiseVolume",
+        "<Alt><Ctrl>XF86AudioRaiseVolume"
+      ],
+      "action": "volume-up-quiet-static",
+      "desc_zh": "音量上小幅 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86AudioRaiseVolume",
+        "<Ctrl>XF86AudioRaiseVolume"
+      ],
+      "action": "volume-up-static",
+      "desc_zh": "音量上 硬件键"
+    },
+    {
+      "source": "多媒体/系统键",
+      "accelerators": [
+        "XF86WWW"
+      ],
+      "action": "www-static",
+      "desc_zh": "浏览器 硬件键"
+    },
+    {
+      "source": "扩展:float-sticker",
+      "accelerators": [
+        "F3"
+      ],
+      "action": "paste-to-screen",
+      "desc_zh": "把剪贴板内容贴到桌面（便签）"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>space"
+      ],
+      "action": "activate-window-menu",
+      "desc_zh": "打开窗口标题栏菜单"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F7"
+      ],
+      "action": "begin-move",
+      "desc_zh": "开始移动窗口（键盘）"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F8"
+      ],
+      "action": "begin-resize",
+      "desc_zh": "开始调整窗口大小（键盘）"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F4"
+      ],
+      "action": "close",
+      "desc_zh": "关闭当前窗口"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F6"
+      ],
+      "action": "cycle-group",
+      "desc_zh": "在同一应用的窗口间循环"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Alt>F6"
+      ],
+      "action": "cycle-group-backward",
+      "desc_zh": "反向：同一应用窗口间循环"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Control><Alt>Escape"
+      ],
+      "action": "cycle-panels",
+      "desc_zh": "在系统区域/面板间循环"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Control><Alt>Escape"
+      ],
+      "action": "cycle-panels-backward",
+      "desc_zh": "反向：系统区域/面板间循环"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>Escape"
+      ],
+      "action": "cycle-windows",
+      "desc_zh": "循环切换所有窗口"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Alt>Escape"
+      ],
+      "action": "cycle-windows-backward",
+      "desc_zh": "反向：循环切换所有窗口"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>h"
+      ],
+      "action": "minimize",
+      "desc_zh": "最小化当前窗口"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Down"
+      ],
+      "action": "move-to-monitor-down",
+      "desc_zh": "把窗口移到下方显示器"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Left"
+      ],
+      "action": "move-to-monitor-left",
+      "desc_zh": "把窗口移到左侧显示器"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Right"
+      ],
+      "action": "move-to-monitor-right",
+      "desc_zh": "把窗口移到右侧显示器"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Up"
+      ],
+      "action": "move-to-monitor-up",
+      "desc_zh": "把窗口移到上方显示器"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Home"
+      ],
+      "action": "move-to-workspace-1",
+      "desc_zh": "把窗口移到工作区 1"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Control><Shift><Alt>Down"
+      ],
+      "action": "move-to-workspace-down",
+      "desc_zh": "把窗口移到下一个工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>End"
+      ],
+      "action": "move-to-workspace-last",
+      "desc_zh": "把窗口移到最后一个工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Page_Up",
+        "<Super><Shift><Alt>Left",
+        "<Control><Shift><Alt>Left"
+      ],
+      "action": "move-to-workspace-left",
+      "desc_zh": "把窗口移到左侧工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super><Shift>Page_Down",
+        "<Super><Shift><Alt>Right",
+        "<Control><Shift><Alt>Right"
+      ],
+      "action": "move-to-workspace-right",
+      "desc_zh": "把窗口移到右侧工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Control><Shift><Alt>Up"
+      ],
+      "action": "move-to-workspace-up",
+      "desc_zh": "把窗口移到上一个工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F1"
+      ],
+      "action": "panel-main-menu",
+      "desc_zh": "打开主菜单/活动概览"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F2"
+      ],
+      "action": "panel-run-dialog",
+      "desc_zh": "打开“运行命令”对话框"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Primary><Super>d",
+        "<Primary><Alt>d",
+        "<Super>d"
+      ],
+      "action": "show-desktop",
+      "desc_zh": "显示桌面（最小化全部）"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>Tab"
+      ],
+      "action": "switch-applications",
+      "desc_zh": "切换应用程序（Alt+Tab）"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Super>Tab"
+      ],
+      "action": "switch-applications-backward",
+      "desc_zh": "反向切换应用程序"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>Above_Tab",
+        "<Alt>Above_Tab"
+      ],
+      "action": "switch-group",
+      "desc_zh": "在当前应用的窗口间切换"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Super>Above_Tab",
+        "<Shift><Alt>Above_Tab"
+      ],
+      "action": "switch-group-backward",
+      "desc_zh": "反向：当前应用窗口间切换"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>space",
+        "XF86Keyboard"
+      ],
+      "action": "switch-input-source",
+      "desc_zh": "切换输入法/键盘布局"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Super>space",
+        "<Shift>XF86Keyboard"
+      ],
+      "action": "switch-input-source-backward",
+      "desc_zh": "反向切换输入法"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Control><Alt>Tab"
+      ],
+      "action": "switch-panels",
+      "desc_zh": "切换系统区域焦点"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Control><Alt>Tab"
+      ],
+      "action": "switch-panels-backward",
+      "desc_zh": "反向切换系统区域焦点"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>Home"
+      ],
+      "action": "switch-to-workspace-1",
+      "desc_zh": "切换到工作区 1"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Control><Alt>Down"
+      ],
+      "action": "switch-to-workspace-down",
+      "desc_zh": "切换到下一个工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>End"
+      ],
+      "action": "switch-to-workspace-last",
+      "desc_zh": "切换到最后一个工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>Page_Up",
+        "<Super><Alt>Left",
+        "<Control><Alt>Left"
+      ],
+      "action": "switch-to-workspace-left",
+      "desc_zh": "切换到左侧工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Super>Page_Down",
+        "<Super><Alt>Right",
+        "<Control><Alt>Right"
+      ],
+      "action": "switch-to-workspace-right",
+      "desc_zh": "切换到右侧工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Control><Alt>Up"
+      ],
+      "action": "switch-to-workspace-up",
+      "desc_zh": "切换到上一个工作区"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>Tab"
+      ],
+      "action": "switch-windows",
+      "desc_zh": "切换窗口"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Shift><Alt>Tab"
+      ],
+      "action": "switch-windows-backward",
+      "desc_zh": "反向切换窗口"
+    },
+    {
+      "source": "窗口管理器",
+      "accelerators": [
+        "<Alt>F10"
+      ],
+      "action": "toggle-maximized",
+      "desc_zh": "最大化/还原窗口"
+    }
+  ],
+  "conflicts": []
+}
