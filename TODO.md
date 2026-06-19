@@ -1,9 +1,21 @@
+[x] 华为备忘录(笔记)同步 @done(2026-06-19)
+    华为备忘录无官方 API / 无 Linux 客户端 / 网页版不支持批量导出文字 → "真·自动双向同步"做不到。
+    实际诉求=继续用已固定在 Chrome 的网页版，只是它空闲很快超时掉登录、要反复重登。
+    方案：网页版当客户端 + 会话保活（不重建同步）。
+    · 掉线两因：①服务端空闲超时(滑动过期,改不了,但可在过期前制造已登录请求续命) ②浏览器未"信任"/退出清cookie。
+    · ①一次性持久化：登录勾"信任此设备"；Chrome 关闭"关窗清Cookie"或给 cloud.huawei.com 设保留数据 → 消除开机重登。
+    · ②保活用户脚本 huawei-notes-keepalive.user.js(Tampermonkey)：空闲满8分钟自动悄悄重载页面续命，
+      检测到在编辑/有选中则跳过(不打断)，被踢回登录页弹桌面通知，不存任何密码，右下角角标显示状态。
+      RELOAD_AFTER_IDLE_MIN 若仍掉线就调小；需实测华为是滑动过期(保活有效)还是绝对过期(保活无效)。
+    · ③自动重登(存密码本地)用户选择不做。备选C:GDPR"数据下载"导出加密zip(每条笔记JSON+HTML)做一次性整库备份。
+    见 huawei-notes-sync/（脚本 + README.md）
+[ ] chrome浏览器有时会卡死，弹出3-4次等待/强制关闭对话框后，才可恢复
+[ ] chrome浏览器不能自动弹出用户名、密码，需要手动输入（在测试右键优化时，曾经切x11时可自动弹出，但切回wayland后，就不再自动弹出）
+[ ] 现系统登出待登入时，桌面花屏、闪烁、部分区域可见登出前窗口部分内容；按回车、盲输密码、回车，可进入系统，进入后恢复正常
 [x] vscode的快捷键：alt+左/右，跳转历史光标位置，现在不是这个键，需要调过来 @done(2026-06-19)
     keybindings.json 增绑 Alt+← → workbench.action.navigateBack、Alt+→ → navigateForward
     （"后退/前进"，在光标历史位置间跳转，含跨文件）。VS Code Linux 默认是 Ctrl+Alt+- / Ctrl+Shift+-。
     用户键位优先级高于默认，无需解绑；Alt+←/→ 不与 GNOME 全局热键冲突。见 docs/vscode-keybindings.md
-[ ] 现系统登出待登入时，桌面花屏、闪烁、部分区域可见登出前窗口部分内容；按回车、盲输密码、回车，可进入系统，进入后恢复正常
-[ ] 华为备忘录(笔记)同步
 [x] chrome浏览器右键优化，现在需要连点两次才有效，可能是跟右键手势插件有关系 @done(2026-06-19)
     元凶=扩展 crxMouse: Mouse Gestures (jlgkpaicikihijadgifklkbpdajbkhjo)，确为右键手势插件。
     根因：Wayland 下 Chrome 右键菜单在 mousedown 瞬间弹出，crxMouse 无法在那一刻区分“点击 vs 手势”，
