@@ -1,3 +1,18 @@
+[x] dolphin: 左树右列表，中文都是仿宋，需要调整 @done(2026-06-20)
+    走过的两条弯路(均无效，已回退)：
+      ① 改 ~/.config/kdeglobals [General] font= —— 无效。GNOME 下未装 plasma-integration，没人把 kdeglobals 喂给 Qt。已还原(备份 kdeglobals.bak.20260620154739)。
+      ② 加 fontconfig 规则给 "Noto Sans" append Noto Sans CJK SC —— 无效。Qt 的中文回退不吃 fontconfig 排序(见下)。已删。
+    真·根因(用 QT_LOGGING_RULES="qt.text.font.match=true" 抓 Dolphin 日志锤死)：
+      · GNOME 会话 Qt 自动走 qgtk3 platformtheme(系统仅此一个插件)，UI 字体直接取自 GNOME font-name="Noto Sans"(纯拉丁、无 CJK 字形)。
+      · 中文要字形回退，而 Qt 自建的回退族列表是【按家族名字母序】排的，取第一个含中文的家族：
+        Noto Sans → 'Adobe 仿宋 Std' → 'AR PL UKai…' → 'Arial' → … → 'Noto Sans CJK SC'(排在很后)。
+        装了 ~/popular-fonts(313 字体)后，字母序最靠前的中文字体变成 Adobe 仿宋 Std → 全 UI 仿宋。预览区走另一字体路径故幸免。
+      · 这是 Qt 内部行为、不读 fontconfig 优先级，所以 kdeglobals / fontconfig 都改不动它。
+    解法(用户选"改全局界面字体")：gsettings set org.gnome.desktop.interface font-name 'Noto Sans CJK SC 10'。
+      Qt 的主家族本身即含中文字形→根本不触发回退→不再仿宋。原值 'Noto Sans,  10'(空格×2)，回退即恢复。
+      副作用极小：GTK 应用界面字体一并变 CJK SC，但其拉丁字形与 Noto Sans 几乎一致，且 GTK 中文本就经 Pango 回退到 CJK SC。
+    已实测(同样抓 qt.text.font.match 日志)：Dolphin 主家族变 'Noto Sans CJK SC'、日志中再无任何仿宋/Adobe 仿宋 Std 回退请求。即时生效，无需注销。
+[ ] 语音输入法：~/funasr_input_linux. 1、验证输入法可用；2、使用asr（不是fast）；3、润色用本地LLM（有6GB显卡）。
 [x] chrome浏览器有时会卡死，弹出3-4次等待/强制关闭对话框后，才可恢复 @done(2026-06-20)
     根因=显卡驱动栈，非 Chrome 本身。本机三台显示器全接在独显 RTX 3050(card1)上，Intel UHD 630 闲置；
       此前独显跑的是开源 nouveau + NVK(Mesa 实验性 Vulkan) + zink(GL-over-Vulkan) 实验栈。
@@ -21,7 +36,6 @@
     第20项 crxMouse 右键手势：X11 下行为与原生 Wayland 不同，待重新核对/微调。
 [x] 现系统登出待登入时，桌面花屏、闪烁、部分区域可见登出前窗口部分内容；按回车、盲输密码、回车，可进入系统，进入后恢复正常 @done(2026-06-20)
     根因=nouveau 模式设置问题。换闭源 nvidia 595 后即消失(实为第1项装驱动那轮就已好)；用户实测花屏/闪烁不再出现、登录界面正常。
-[ ] 语音输入法：~/funasr_input_linux
 [x] chrome浏览器不能自动弹出已保存的用户名、密码，需要手动输入（在测试右键优化时，曾经切x11时可自动弹出，但切回wayland后，就不再自动弹出）@done(2026-06-20)
     根因=原生 Wayland 后端下 Chrome 把 autofill 下拉做成 xdg-popup 创建失败（二进制有 "Failed to create XdgPopup"）→ 下拉不显示。
     非密码丢失：keyring(secrets+pkcs11)在跑、密码管理器默认开启、密码已存；切 X11(XWayland)能弹、切回原生 Wayland 不弹，与第20项的取舍死锁。
