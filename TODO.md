@@ -1,5 +1,30 @@
 - [ ] 语音输入法：~/funasr_input_linux. 1、验证输入法可用（重登后生效）；2、改用fast (nano与Ollama并存GPU不够)；3、润色用本地LLM qwen2.5:3b @done(2026-06-21)。
-- [ ] 本机插着一个mercury的无线网卡，但好像系统识别不到，无法使用5g wifi
+- [x] 本机插着一个mercury的无线网卡，但好像系统识别不到，无法使用5g wifi @done(2026-06-21)
+    已定位：不是 Realtek，而是 AICsemi AIC8800D80 USB 网卡。启动时先枚举为虚拟U盘 `a69c:5721 Aic MSC`，
+      已被 usb_modeswitch 切到 WLAN 模式 `a69c:8d80 AIC Wlan`，但 NetworkManager 只看到内置 `ath9k/wlp6s0`。
+    系统里已有驱动 `/lib/modules/6.17.0-35-generic/kernel/drivers/net/wireless/aic8800/{aic_load_fw.ko,aic8800_fdrv.ko}`，
+      firmware 也在 `/lib/firmware/aic8800D80/`；真正阻塞点是 Secure Boot：journal 有 `Loading of unsigned module is rejected`，
+      两个 AIC 模块 `modinfo -F signer` 为空，故自动加载被拒，网卡停在 `a69c:8d80`，没有生成新 wifi 接口。
+    本机已加载 `ztj-dell Secure Boot Module Signature key`，修复路径=用现有 MOK 签这两个模块 → depmod → modprobe →
+      绑定/重插设备。已写 `scripts/mercury-aic8800-enable.sh` 和 `docs/mercury-aic8800.md`；当前会话无免密 sudo，
+      需要用户输入 sudo 密码后运行脚本完成实测。若运行后仍未出现新 wifi 设备，拔插一次 Mercury 网卡再看 `nmcli device status`。
+    [2026-06-21 复测] 用户运行后签名成功，`aic_load_fw/aic8800_fdrv` 已加载，firmware 已上传；设备最终重枚举为
+      `2357:014b TP-Link AIC 8800D80`，但当前驱动没有内置这个 alias，仍未生成 wifi 接口。
+    [2026-06-21 再复测] `new_id 2357 014b` 不能用：驱动内部打印 `aicwf_usb_probe pid:0x2357 vid:0x014B unsupport`，
+      随后在 `aicwf_usb_free_urb` 空指针 Oops，脚本被内核杀掉。已撤掉危险强绑逻辑。源码 `/usr/src/AIC8800`
+      已含 `USB_PRODUCT_ID_MERCURY 0x014b`，但已安装模块缺 alias；正确路径=重启清掉 Oops 状态后运行
+      `scripts/mercury-aic8800-rebuild-install.sh` 从源码重编/签名/安装，再运行 enable 脚本验证。
+    [2026-06-21 编译修复] 用户重跑 rebuild 时暴露 `/usr/src/AIC8800` 不兼容 6.17：`MODULE_IMPORT_NS`、timer API、
+      cfg80211 回调签名/CAC 事件参数均已在本地源码修补。已复制到 `/tmp/AIC8800-buildcheck` 非安装编译通过，产物确认含
+      `alias: usb:v2357p014Bd*...`。下一步：再次运行 `./scripts/mercury-aic8800-rebuild-install.sh` 安装签名模块，
+      再拔插网卡/运行 enable，检查 `nmcli device status`。
+    [2026-06-21 安装后] 新模块已安装且 `modules.alias` 含 `2357:014b`，但内核当前只自动加载了 `aic_load_fw`，
+      `2357:014b` 接口仍绑在通用 USB driver。enable 脚本已改为：仅当新 alias 存在时，才 bind `2357:014b`
+      到 `aic8800_fdrv`（不会再向旧模块强塞 `new_id`）。
+    [2026-06-21 完成] enable 后 NetworkManager 已看到新接口 `wlx4cb7e0569cc4` 和 `p2p-dev-wlx4cb7e0569cc4`；
+      kernel 日志显示 `is 5g support = 1`，支持 36/40/44/48/52/.../165 等 5G 信道，接口从 `wlan0` rename 为
+      `wlx4cb7e0569cc4`。后续直接在 GNOME Wi-Fi 或 `nmcli dev wifi connect ... ifname wlx4cb7e0569cc4` 连 5G SSID。
+      若接口偶发消失，优先怀疑 USB 接触/供电/省电重置，先拔插后跑 `scripts/mercury-aic8800-enable.sh`。
 - [ ] 全局 ctrl+f1 截图，可直接贴在屏幕上，或选择复制到剪贴板
 - [/] 复制文本/图片后，F3贴在桌面上，右键可重新复制，双击可销毁，拖动可移动，滚动可缩放 
   - [x] 复制文本可贴屏幕 @done(2026-06-19)
