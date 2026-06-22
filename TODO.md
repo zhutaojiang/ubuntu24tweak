@@ -1,3 +1,17 @@
+- [/] 复制文本/图片后，F3贴在桌面上，右键可重新复制，双击可销毁，拖动可移动，滚动可缩放 
+  - [x] 复制文本可贴屏幕 @done(2026-06-19)
+  - [ ] 长文本应能自动换行--可显示完整内容
+  - [x] 现在鼠标滚动缩放突然失效了 @done(2026-06-23)
+  - [x] 当它在某应用（终端除外）上面时，不能拖动；在桌面上，若右键弹出系统菜单后，就不能拖动了 @done(2026-06-23)
+    根因(三项同源)：贴纸用 `Main.layoutManager.uiGroup.add_child()` 加进 shell chrome，但没登记进 stage 输入区。
+      X11 下 shell 给覆盖层设了输入形状，普通 uiGroup 子节点在应用窗口/桌面上方时鼠标事件直接穿透到下面的窗口/桌面：
+      → 压在应用上收不到 button-press 故不能拖；→ 桌面右键穿透到 nautilus 弹系统菜单并抢 grab；→ 滚轮事件也到不了。
+    解法：改用 `Main.layoutManager.addChrome(actor)`(affectsInputRegion 默认 true)把 actor 经变换(含缩放)的边界
+      登记进 stage 输入区，shell 才能在贴纸区域收到 按下/释放/滚动；销毁时 `removeChrome`。滚轮缩放也改回 actor 级
+      `scroll-event`(输入区已含本 actor，无需再全局 captured-event)。已 install.sh 装到 ~/.local/share/...，
+      X11 下 Alt+F2→r 重启 shell 或注销重登生效。
+  - [ ] 复制图片可贴屏幕
+- [ ] 全局 ctrl+f1 截图，可直接贴在屏幕上，或选择复制到剪贴板，双击可以销毁，拖动可以移动；鼠标滚轮可缩放。此功能可参照windows下的snipaste。
 - [x] 想实现内网穿透，通过一台有公网域名/IP的服务器作中转，用frp软件实现远程ssh连接本机。 @done(2026-06-21)
     [2026-06-21] 已完成公网服务器 frps systemd 化，服务 active 并监听公网 frp 端口；本机已安装 frpc 0.68.0 到
       ~/.local/bin/frpc，写入用户级 systemd 服务 ~/.config/systemd/user/frpc.service 并 enable/start，远端已监听转发端口。
@@ -6,13 +20,6 @@
       监听 22；本机 `frpc.service` active，远端 `frps.service` active，远端已监听 frp 控制端口和 SSH 转发端口。
       用 `ssh -p <转发端口> <本机用户名>@<公网域名>` 非交互测试已到达本机 SSH 认证阶段；实际使用时输入本机用户密码登录。
       后续安全加固：改 SSH 密钥登录并关闭密码登录，另给 frp 增加 token。
-- [ ] 全局 ctrl+f1 截图，可直接贴在屏幕上，或选择复制到剪贴板，双击可以销毁，拖动可以移动；鼠标滚轮可缩放。此功能可参照windows下的snipaste。
-- [/] 复制文本/图片后，F3贴在桌面上，右键可重新复制，双击可销毁，拖动可移动，滚动可缩放 
-  - [x] 复制文本可贴屏幕 @done(2026-06-19)
-  - [ ] 长文本应能自动换行--可显示完整内容
-  - [ ] 现在鼠标滚动缩放突然失效了
-  - [ ] 当它在某应用（终端除外）上面时，不能拖动；在桌面上，若右键弹出系统菜单后，就不能拖动了
-  - [ ] 复制图片可贴屏幕
 - [x] 语音输入法：~/funasr_input_linux. 1、验证输入法可用（重登后生效）；2、改用fast (nano与Ollama并存GPU不够)；3、润色用本地LLM qwen2.5:3b @done(2026-06-21)
 - [x] 本机插着一个mercury的无线网卡，但好像系统识别不到，无法使用5g wifi @done(2026-06-21)
     已定位：不是 Realtek，而是 AICsemi AIC8800D80 USB 网卡。启动时先枚举为虚拟U盘 `a69c:5721 Aic MSC`，

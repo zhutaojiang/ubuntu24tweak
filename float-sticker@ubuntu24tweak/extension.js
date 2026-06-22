@@ -30,7 +30,17 @@ class StickerWidget {
         this._box = new St.BoxLayout({ vertical: true });
         this._actor.set_child(this._box);
 
-        this._label = new St.Label({ text, style: labelStyle });
+        this._label = new St.Label({
+            text,
+            style: labelStyle,
+            x_expand: true,
+        });
+        try {
+            this._label.clutter_text.line_wrap = true;
+            this._label.clutter_text.line_wrap_mode = 2;
+        } catch (e) {
+            log('[float-sticker] line_wrap failed: ' + e);
+        }
         this._box.add_child(this._label);
 
         this._scale = 1.0;
@@ -44,10 +54,17 @@ class StickerWidget {
 
         this._buttonPressId = this._actor.connect('button-press-event',
             this._onButtonPress.bind(this));
+
         this._scrollId = this._actor.connect('scroll-event',
             this._onScroll.bind(this));
 
-        Main.layoutManager.uiGroup.add_child(this._actor);
+        // addChrome 而非 uiGroup.add_child：把本 actor 的(经变换、含缩放的)边界
+        // 登记进 stage 输入区(affectsInputRegion 默认 true)。X11 下 shell 给覆盖层
+        // 设了输入形状，普通 uiGroup 子节点在应用窗口/桌面上方时事件会穿透到下面的
+        // 窗口，导致贴纸压在应用上无法拖动、桌面右键反而弹系统菜单、滚轮也收不到。
+        // 登记输入区后，shell 才能在贴纸所在区域收到 按下/释放/滚动 事件。
+        Main.layoutManager.addChrome(this._actor);
+        this._actor.get_parent().set_child_above_sibling(this._actor, null);
     }
 
     _onButtonPress(actor, event) {
@@ -61,14 +78,13 @@ class StickerWidget {
             }
             this._lastClickTime = time;
 
+            this._actor.get_parent().set_child_above_sibling(this._actor, null);
+
             let [x, y] = event.get_coords();
             this._dragging = true;
             this._dragStartX = x - this._actor.x;
             this._dragStartY = y - this._actor.y;
 
-            // 显式抓取指针：拖动期间所有输入直接路由到本 actor，
-            // 这样松开时 button-release 一定能在 actor 上收到（接到 stage 上会被
-            // St.Button 默认处理吃掉，导致永远释放不了）。
             this._grab = global.stage.grab(this._actor);
             this._motionId = this._actor.connect('motion-event',
                 this._onMotion.bind(this));
@@ -80,6 +96,7 @@ class StickerWidget {
         if (button === Clutter.BUTTON_SECONDARY) {
             St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD,
                 this._label.get_text());
+            this._actor.get_parent().set_child_above_sibling(this._actor, null);
             return Clutter.EVENT_STOP;
         }
 
@@ -116,13 +133,23 @@ class StickerWidget {
     }
 
     _onScroll(actor, event) {
+        let step = 0;
         let dir = event.get_scroll_direction();
-        if (dir === Clutter.ScrollDirection.UP)
-            this._scale = Math.min(3.0, this._scale + 0.1);
-        else if (dir === Clutter.ScrollDirection.DOWN)
-            this._scale = Math.max(0.3, this._scale - 0.1);
-        this._actor.set_scale(this._scale, this._scale);
-        return Clutter.EVENT_STOP;
+        if (dir === Clutter.ScrollDirection.SMOOTH) {
+            let [, dy] = event.get_scroll_delta();
+            if (dy < 0) step = 0.07;
+            else if (dy > 0) step = -0.07;
+        } else if (dir === Clutter.ScrollDirection.UP) {
+            step = 0.1;
+        } else if (dir === Clutter.ScrollDirection.DOWN) {
+            step = -0.1;
+        }
+        if (step !== 0) {
+            this._scale = Math.min(3.0, Math.max(0.3, this._scale + step));
+            this._actor.set_scale(this._scale, this._scale);
+            return Clutter.EVENT_STOP;
+        }
+        return Clutter.EVENT_PROPAGATE;
     }
 
     destroy() {
@@ -135,6 +162,7 @@ class StickerWidget {
             this._actor.disconnect(this._scrollId);
             this._scrollId = null;
         }
+        Main.layoutManager.removeChrome(this._actor);
         this._actor.destroy();
         let i = _widgets.indexOf(this);
         if (i !== -1) _widgets.splice(i, 1);
