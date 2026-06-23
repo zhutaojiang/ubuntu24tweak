@@ -1,4 +1,4 @@
-- [/] 复制文本/图片后，F3贴在桌面上，右键可重新复制，双击可销毁，拖动可移动，滚动可缩放 
+- [x] 复制文本/图片后，F3贴在桌面上，右键可重新复制，双击可销毁，拖动可移动，滚动可缩放 @done(2026-06-23)
   - [x] 复制文本可贴屏幕 @done(2026-06-19)
   - [x] 长文本应能自动换行--可显示完整内容 @done(2026-06-22)
   - [x] 现在鼠标滚动缩放突然失效了 @done(2026-06-23)
@@ -10,7 +10,18 @@
       登记进 stage 输入区，shell 才能在贴纸区域收到 按下/释放/滚动；销毁时 `removeChrome`。滚轮缩放也改回 actor 级
       `scroll-event`(输入区已含本 actor，无需再全局 captured-event)。已 install.sh 装到 ~/.local/share/...，
       X11 下 Alt+F2→r 重启 shell 或注销重登生效。
-  - [ ] 复制图片可贴屏幕
+  - [x] 复制图片可贴屏幕 @done(2026-06-23)
+    取图：`St.Clipboard.get_mimetypes()` 探测，优先 image/png 否则任意 image/*，无图再回退文本
+      (注意 GNOME 46 是 `get_content(type,mime,cb)`/`get_mimetypes()`，不是 get_content_for_mime_type)。
+    解码：`GdkPixbuf.Pixbuf.new_from_stream(Gio.MemoryInputStream.new_from_bytes(bytes))`。
+    渲染：`St.ImageContent`(继承 Clutter.Image)`new_with_preferred_size`+`set_data(pixbuf.get_pixels(),
+      Cogl.PixelFormat.RGBA_8888/RGB_888, w,h,rowstride)`(St 无 set_bytes)，初始等比缩到 ≤600×700。
+    右键重新复制：从当前 pixbuf 现编码一份新 PNG GBytes 再 `set_content`——不能复用 get_content 回调里的
+      原始 bytes，X11 下那是剪贴板匿名文件映射的视图、回调返回即失效，复用会让 MetaAnonymousFile 创建失败
+      (设不上+X11取数超时卡几秒)。
+    滚轮缩放：一次物理拨动=一档(方向变或安静>50ms 判定新拨动，归并一档的不定数子事件)，走固定缩放阶梯
+      (≤100%每档10%、100→200%每档20%、>200%每档50%)，按下标进退故数值干净、上下严格可逆；左上角显示
+      百分比、1.5s 后消失。范围 30%–300%。
 - [ ] 全局 ctrl+f1 截图，可直接贴在屏幕上，或选择复制到剪贴板，双击可以销毁，拖动可以移动；鼠标滚轮可缩放。此功能可参照windows下的snipaste。
 - [x] 想实现内网穿透，通过一台有公网域名/IP的服务器作中转，用frp软件实现远程ssh连接本机。 @done(2026-06-21)
     [2026-06-21] 已完成公网服务器 frps systemd 化，服务 active 并监听公网 frp 端口；本机已安装 frpc 0.68.0 到
