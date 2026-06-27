@@ -13,6 +13,7 @@ let _pasteKeybindingId = null;
 let _screenshotKeybindingId = null;
 let _widgets = [];
 let _activeSnip = null;
+let _activeSticker = null;
 
 // 缩放档位阶梯(%)：100% 以下每档 10%，100%→200% 每档 20%，再往上每档 50%。
 // 每拨动一次走一档，按下标进退 → 数值永远干净、上下严格可逆。
@@ -25,21 +26,30 @@ const ZOOM_DEFAULT_INDEX = ZOOM_STOPS.indexOf(100);
 
 class StickerWidget {
     constructor(content, x, y) {
-        const baseStyle = `
+        this._baseStyle = `
             background-color: rgba(255, 255, 255, 0.97);
             border: 1px solid rgba(0, 0, 0, 0.35);
             border-radius: 10px;
             box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
         `;
+        this._selectedStyle = `
+            background-color: rgba(255, 255, 255, 0.97);
+            border: 1px solid #4A9EFF;
+            border-radius: 10px;
+            box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
+        `;
         // 文本贴纸限定宽度并自动换行；图片贴纸按图自适应、仅留 3px 白边。
-        const extraStyle = content.kind === 'image'
+        this._extraStyle = content.kind === 'image'
             ? 'padding: 3px;'
             : 'min-width: 120px; max-width: 480px;';
+        this._isImage = content.kind === 'image';
+        this._selected = false;
 
         this._actor = new St.Button({
             reactive: true,
             track_hover: true,
-            style: baseStyle + extraStyle,
+            can_focus: true,
+            style: this._baseStyle + this._extraStyle,
             x: x,
             y: y,
         });
@@ -74,6 +84,8 @@ class StickerWidget {
 
         this._scrollId = this._actor.connect('scroll-event',
             this._onScroll.bind(this));
+        this._keyPressId = this._actor.connect('key-press-event',
+            this._onKeyPress.bind(this));
 
         // addChrome 而非 uiGroup.add_child：把本 actor 的(经变换、含缩放的)边界
         // 登记进 stage 输入区(affectsInputRegion 默认 true)。X11 下 shell 给覆盖层
@@ -102,21 +114,56 @@ class StickerWidget {
     }
 
     _buildImage(content) {
-        let pixbuf = content.pixbuf;
-        let w = pixbuf.get_width();
-        let h = pixbuf.get_height();
+        this._imagePixbuf = content.pixbuf;
+        let w = this._imagePixbuf.get_width();
+        let h = this._imagePixbuf.get_height();
 
-        let dw, dh;
+        this._imageDisplayWidth = 0;
+        this._imageDisplayHeight = 0;
         if (content.displayWidth && content.displayHeight) {
-            dw = Math.max(1, Math.round(content.displayWidth));
-            dh = Math.max(1, Math.round(content.displayHeight));
+            this._imageDisplayWidth = Math.max(1, Math.round(content.displayWidth));
+            this._imageDisplayHeight = Math.max(1, Math.round(content.displayHeight));
         } else {
             // 普通剪贴板图片初始按最大边等比缩到屏内尺寸，之后仍可滚轮缩放。
             const MAX_W = 600, MAX_H = 700;
             let fit = Math.min(1, MAX_W / w, MAX_H / h);
-            dw = Math.max(1, Math.round(w * fit));
-            dh = Math.max(1, Math.round(h * fit));
+            this._imageDisplayWidth = Math.max(1, Math.round(w * fit));
+            this._imageDisplayHeight = Math.max(1, Math.round(h * fit));
         }
+
+        this._imageActor = new St.Widget({
+            width: this._imageDisplayWidth,
+            height: this._imageDisplayHeight,
+            x_expand: true,
+        });
+        this._box.add_child(this._imageActor);
+        this._renderImage();
+
+        // 右键重新复制：从当前 pixbuf 现编码一份 PNG 到全新的 GBytes 再写剪贴板。
+        // 不能复用 get_content 回调里的原始 bytes —— X11 下那是剪贴板内部
+        // 匿名文件映射的视图，回调返回后即失效，复用会让 MetaAnonymousFile 创建
+        // 失败(剪贴板设不上→粘贴还是旧文本，且 X11 取数超时→整桌面卡几秒)。
+        this._recopy = () => {
+            try {
+                let [ok, buf] = this._imagePixbuf.save_to_bufferv('png', [], []);
+                if (ok) {
+                    St.Clipboard.get_default().set_content(
+                        St.ClipboardType.CLIPBOARD, 'image/png',
+                        GLib.Bytes.new(buf));
+                }
+            } catch (e) {
+                log('[float-sticker] recopy failed: ' + e);
+            }
+        };
+    }
+
+    _renderImage() {
+        if (!this._imageActor || !this._imagePixbuf)
+            return;
+
+        let pixbuf = this._imagePixbuf;
+        let w = pixbuf.get_width();
+        let h = pixbuf.get_height();
 
         // St.ImageContent 继承自 Clutter.Image，像素经 set_data 写入(St 没有 set_bytes)。
         let imageContent = St.ImageContent.new_with_preferred_size(w, h);
@@ -134,26 +181,58 @@ class StickerWidget {
             log('[float-sticker] set_data failed: ' + e);
         }
 
-        let img = new St.Widget({ width: dw, height: dh, x_expand: true });
-        img.set_content(imageContent);
-        this._box.add_child(img);
+        this._imageActor.set_size(this._imageDisplayWidth, this._imageDisplayHeight);
+        this._imageActor.set_content(imageContent);
+    }
 
-        // 右键重新复制：从当前 pixbuf 现编码一份 PNG 到全新的 GBytes 再写剪贴板。
-        // 不能复用 get_content 回调里的原始 bytes —— X11 下那是剪贴板内部
-        // 匿名文件映射的视图，回调返回后即失效，复用会让 MetaAnonymousFile 创建
-        // 失败(剪贴板设不上→粘贴还是旧文本，且 X11 取数超时→整桌面卡几秒)。
-        this._recopy = () => {
-            try {
-                let [ok, buf] = pixbuf.save_to_bufferv('png', [], []);
-                if (ok) {
-                    St.Clipboard.get_default().set_content(
-                        St.ClipboardType.CLIPBOARD, 'image/png',
-                        GLib.Bytes.new(buf));
-                }
-            } catch (e) {
-                log('[float-sticker] recopy failed: ' + e);
+    setSelected(selected) {
+        if (this._selected === selected)
+            return;
+        this._selected = selected;
+        this._actor.set_style(
+            (selected ? this._selectedStyle : this._baseStyle) + this._extraStyle);
+    }
+
+    _activate() {
+        if (_activeSticker && _activeSticker !== this)
+            _activeSticker.setSelected(false);
+        _activeSticker = this;
+        if (this._isImage)
+            this.setSelected(true);
+        this._actor.grab_key_focus();
+    }
+
+    transformImage(action) {
+        if (!this._isImage || !this._imagePixbuf)
+            return false;
+
+        try {
+            if (action === 'rotate-left' || action === 'rotate-right') {
+                let rotation = action === 'rotate-left'
+                    ? GdkPixbuf.PixbufRotation.COUNTERCLOCKWISE
+                    : GdkPixbuf.PixbufRotation.CLOCKWISE;
+                let rotated = this._imagePixbuf.rotate_simple(rotation);
+                if (!rotated)
+                    return false;
+                this._imagePixbuf = rotated;
+                [this._imageDisplayWidth, this._imageDisplayHeight] =
+                    [this._imageDisplayHeight, this._imageDisplayWidth];
+            } else if (action === 'flip-horizontal' || action === 'flip-vertical') {
+                let flipped = this._imagePixbuf.flip(action === 'flip-horizontal');
+                if (!flipped)
+                    return false;
+                this._imagePixbuf = flipped;
+            } else {
+                return false;
             }
-        };
+
+            this._renderImage();
+            this._actor.queue_relayout();
+            return true;
+        } catch (e) {
+            log('[float-sticker] transform image failed: ' + e);
+            return false;
+        }
     }
 
     _onButtonPress(actor, event) {
@@ -161,6 +240,8 @@ class StickerWidget {
         let time = event.get_time();
 
         if (button === Clutter.BUTTON_PRIMARY) {
+            this._activate();
+
             if (time - this._lastClickTime < 300) {
                 this.destroy();
                 return Clutter.EVENT_STOP;
@@ -183,12 +264,19 @@ class StickerWidget {
         }
 
         if (button === Clutter.BUTTON_SECONDARY) {
+            this._activate();
             if (this._recopy) this._recopy();
             this._actor.get_parent().set_child_above_sibling(this._actor, null);
             return Clutter.EVENT_STOP;
         }
 
         return Clutter.EVENT_PROPAGATE;
+    }
+
+    _onKeyPress(actor, event) {
+        if (!_activeSticker || _activeSticker !== this || !this._isImage)
+            return Clutter.EVENT_PROPAGATE;
+        return _handleStickerKeyPress(this, event);
     }
 
     _onMotion() {
@@ -301,6 +389,10 @@ class StickerWidget {
             this._actor.disconnect(this._scrollId);
             this._scrollId = null;
         }
+        if (this._keyPressId) {
+            this._actor.disconnect(this._keyPressId);
+            this._keyPressId = null;
+        }
         if (this._zoomLabelTimeout) {
             GLib.Source.remove(this._zoomLabelTimeout);
             this._zoomLabelTimeout = 0;
@@ -311,9 +403,43 @@ class StickerWidget {
         }
         Main.layoutManager.removeChrome(this._actor);
         this._actor.destroy();
+        if (_activeSticker === this)
+            _activeSticker = null;
         let i = _widgets.indexOf(this);
         if (i !== -1) _widgets.splice(i, 1);
     }
+}
+
+function _handleStickerKeyPress(sticker, event) {
+    if (_activeSnip || !sticker || !sticker._isImage)
+        return Clutter.EVENT_PROPAGATE;
+
+    let key = event.get_key_symbol();
+    let ch = '';
+    try {
+        let unicode = event.get_key_unicode();
+        if (unicode)
+            ch = String.fromCodePoint(unicode);
+    } catch (e) {
+        ch = '';
+    }
+
+    let action = null;
+    if (key === Clutter.KEY_1 || key === Clutter.KEY_KP_1 || ch === '1')
+        action = 'rotate-left';
+    else if (key === Clutter.KEY_2 || key === Clutter.KEY_KP_2 || ch === '2')
+        action = 'flip-horizontal';
+    else if (key === Clutter.KEY_3 || key === Clutter.KEY_KP_3 || ch === '3')
+        action = 'flip-vertical';
+    else if (key === Clutter.KEY_4 || key === Clutter.KEY_KP_4 || ch === '4')
+        action = 'rotate-right';
+
+    if (!action)
+        return Clutter.EVENT_PROPAGATE;
+
+    if (sticker.transformImage(action))
+        return Clutter.EVENT_STOP;
+    return Clutter.EVENT_PROPAGATE;
 }
 
 // ── 截图选区叠加层 ────────────────────────────────────────────────
@@ -1211,5 +1337,6 @@ export default class FloatStickerExtension extends Extension {
         if (_activeSnip) _activeSnip.destroy();
         while (_widgets.length)
             _widgets[0].destroy();
+        _activeSticker = null;
     }
 }
