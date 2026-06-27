@@ -51,7 +51,7 @@ class StickerWidget {
         this._recopy = null;
 
         if (content.kind === 'image')
-            this._buildImage(content.pixbuf);
+            this._buildImage(content);
         else
             this._buildText(content.text);
 
@@ -101,15 +101,22 @@ class StickerWidget {
             St.ClipboardType.CLIPBOARD, text);
     }
 
-    _buildImage(pixbuf) {
+    _buildImage(content) {
+        let pixbuf = content.pixbuf;
         let w = pixbuf.get_width();
         let h = pixbuf.get_height();
 
-        // 初始按最大边等比缩到屏内尺寸，之后仍可滚轮缩放。
-        const MAX_W = 600, MAX_H = 700;
-        let fit = Math.min(1, MAX_W / w, MAX_H / h);
-        let dw = Math.max(1, Math.round(w * fit));
-        let dh = Math.max(1, Math.round(h * fit));
+        let dw, dh;
+        if (content.displayWidth && content.displayHeight) {
+            dw = Math.max(1, Math.round(content.displayWidth));
+            dh = Math.max(1, Math.round(content.displayHeight));
+        } else {
+            // 普通剪贴板图片初始按最大边等比缩到屏内尺寸，之后仍可滚轮缩放。
+            const MAX_W = 600, MAX_H = 700;
+            let fit = Math.min(1, MAX_W / w, MAX_H / h);
+            dw = Math.max(1, Math.round(w * fit));
+            dh = Math.max(1, Math.round(h * fit));
+        }
 
         // St.ImageContent 继承自 Clutter.Image，像素经 set_data 写入(St 没有 set_bytes)。
         let imageContent = St.ImageContent.new_with_preferred_size(w, h);
@@ -316,16 +323,7 @@ const MIN_SEL = 5;
 
 class SnipSelection {
     constructor() {
-        this._monitor = Main.layoutManager.primaryMonitor ||
-            Main.layoutManager.monitors[0];
-        this._bounds = this._monitor
-            ? {
-                x: this._monitor.x,
-                y: this._monitor.y,
-                w: this._monitor.width,
-                h: this._monitor.height,
-            }
-            : { x: 0, y: 0, w: 0, h: 0 };
+        this._bounds = this._getScreenBounds();
 
         this._sel = { x: 0, y: 0, w: 0, h: 0 };
         this._mode = 'INIT'; // INIT | SELECTING | SELECTED | MOVING | RESIZING
@@ -350,6 +348,31 @@ class SnipSelection {
         this._root = null;
 
         this._createUI();
+    }
+
+    _getScreenBounds() {
+        let monitors = Main.layoutManager.monitors || [];
+        if (monitors.length === 0)
+            return { x: 0, y: 0, w: global.stage.width, h: global.stage.height };
+
+        let x1 = monitors[0].x;
+        let y1 = monitors[0].y;
+        let x2 = monitors[0].x + monitors[0].width;
+        let y2 = monitors[0].y + monitors[0].height;
+
+        for (let m of monitors) {
+            x1 = Math.min(x1, m.x);
+            y1 = Math.min(y1, m.y);
+            x2 = Math.max(x2, m.x + m.width);
+            y2 = Math.max(y2, m.y + m.height);
+        }
+
+        return {
+            x: x1,
+            y: y1,
+            w: Math.max(1, x2 - x1),
+            h: Math.max(1, y2 - y1),
+        };
     }
 
     _addActor(actor) {
@@ -1034,7 +1057,7 @@ class SnipSelection {
                         // Image stickers have 3px padding; offset the actor so
                         // the captured pixels line up with the selected area.
                         _widgets.push(new StickerWidget(
-                            { kind: 'image', pixbuf },
+                            { kind: 'image', pixbuf, displayWidth: w, displayHeight: h },
                             Math.round(r.x - 4),
                             Math.round(r.y - 4)));
                     } else if (action === 'copy') {
