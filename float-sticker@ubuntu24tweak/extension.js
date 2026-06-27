@@ -9,8 +9,10 @@ import GdkPixbuf from 'gi://GdkPixbuf';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-let _keybindingId = null;
+let _pasteKeybindingId = null;
+let _screenshotKeybindingId = null;
 let _widgets = [];
+let _activeSnip = null;
 
 // 缩放档位阶梯(%)：100% 以下每档 10%，100%→200% 每档 20%，再往上每档 50%。
 // 每拨动一次走一档，按下标进退 → 数值永远干净、上下严格可逆。
@@ -307,6 +309,805 @@ class StickerWidget {
     }
 }
 
+// ── 截图选区叠加层 ────────────────────────────────────────────────
+// Ctrl+F1 进入：全屏半透明蒙版 + 拖拽框选 + 8-向手柄调整 + 贴屏/复制/保存
+
+const MIN_SEL = 5;
+
+class SnipSelection {
+    constructor() {
+        this._monitor = Main.layoutManager.primaryMonitor ||
+            Main.layoutManager.monitors[0];
+        this._bounds = this._monitor
+            ? {
+                x: this._monitor.x,
+                y: this._monitor.y,
+                w: this._monitor.width,
+                h: this._monitor.height,
+            }
+            : { x: 0, y: 0, w: 0, h: 0 };
+
+        this._sel = { x: 0, y: 0, w: 0, h: 0 };
+        this._mode = 'INIT'; // INIT | SELECTING | SELECTED | MOVING | RESIZING
+        this._motionId = null;
+        this._releaseId = null;
+        this._dragGrab = null;
+        this._dragBaseX = 0;
+        this._dragBaseY = 0;
+        this._selectStartX = 0;
+        this._selectStartY = 0;
+        this._dragStartSel = null;
+        this._hSign = 0;  // resize handle direction: -1/0/1
+        this._vSign = 0;
+        this._cursor = null;
+        this._actors = [];
+        this._cancelTimeoutId = 0;
+        this._commitTimeoutId = 0;
+        this._capturedEventId = 0;
+        this._modalGrab = null;
+        this._destroyed = false;
+        this._committing = false;
+        this._root = null;
+
+        this._createUI();
+    }
+
+    _addActor(actor) {
+        this._root.add_child(actor);
+        this._actors.push(actor);
+    }
+
+    _createUI() {
+        let b = this._bounds;
+
+        this._root = new St.Widget({
+            reactive: true,
+            can_focus: true,
+            x: b.x, y: b.y,
+            width: b.w,
+            height: b.h,
+        });
+        this._root.connect('button-press-event', this._onCapturePress.bind(this));
+        this._root.connect('key-press-event', this._onKeyPress.bind(this));
+        Main.layoutManager.addChrome(this._root);
+
+        // 捕获层：透明全屏，响应初始框选 & 移动选区
+        this._capture = new St.Widget({
+            reactive: true,
+            can_focus: true,
+            x: 0, y: 0, width: b.w, height: b.h,
+        });
+        this._capture.connect('button-press-event', this._onCapturePress.bind(this));
+        this._capture.connect('motion-event', this._onCaptureHover.bind(this));
+        this._capture.connect('key-press-event', this._onKeyPress.bind(this));
+        this._addActor(this._capture);
+
+        // 暗色蒙版 (4 块，中央挖空)
+        for (let i = 0; i < 4; i++) {
+            let m = new St.Widget({
+                reactive: false,
+                style: 'background-color: rgba(0,0,0,0.45);',
+            });
+            this._addActor(m);
+            this._masks = this._masks || [];
+            this._masks.push(m);
+        }
+
+        // 选区边框
+        this._border = new St.Widget({ style: 'border: 2px solid #4A9EFF;' });
+        this._border.hide();
+        this._addActor(this._border);
+
+        // 8 个缩放手柄
+        this._handles = [];
+        // 角 + 边中点，signX/signY 指示拖拽方向
+        let hDefs = [
+            [-1, -1], [0, -1], [1, -1],
+            [1,  0], [1,  1], [0,  1],
+            [-1, 1], [-1,  0],
+        ];
+        for (let i = 0; i < 8; i++) {
+            let h = new St.Widget({
+                reactive: true,
+                width: 10, height: 10,
+                style: 'background-color: #fff; border: 2px solid #4A9EFF; '
+                     + 'border-radius: 2px;',
+            });
+            h.hide();
+            h._handleIdx = i;
+            h._signX = hDefs[i][0];
+            h._signY = hDefs[i][1];
+            h.connect('button-press-event', this._onHandlePress.bind(this));
+            this._addActor(h);
+            this._handles.push(h);
+        }
+
+        // 操作提示
+        this._hint = new St.Label({
+            text: '拖拽框选截图区域，Esc 取消',
+            style: 'color: #fff; font-size: 15px; background-color: rgba(0,0,0,0.55); '
+                 + 'padding: 7px 18px; border-radius: 7px;',
+        });
+        let pm = Main.layoutManager.primaryMonitor;
+        this._hint.set_position(
+            pm.x - b.x + Math.round((pm.width - 240) / 2),
+            pm.y - b.y + Math.round(pm.height * 0.32));
+        this._addActor(this._hint);
+
+        // 初始全暗
+        this._updateMasks();
+        this._raiseInteractiveChrome();
+        this._capturedEventId = global.stage.connect('captured-event',
+            this._onCapturedEvent.bind(this));
+        this._modalGrab = Main.pushModal(this._root);
+        if (this._modalGrab &&
+            (this._modalGrab.get_seat_state() & Clutter.GrabState.KEYBOARD) === 0) {
+            Main.popModal(this._modalGrab);
+            this._modalGrab = null;
+        }
+        this._capture.grab_key_focus();
+        this._armCancelTimeout();
+    }
+
+    _updateMasks() {
+        let s = this._normalizeSelection(this._sel), b = this._bounds;
+        let lx = s.x - b.x, ly = s.y - b.y;
+        let isInit = this._mode === 'INIT';
+        if (isInit || s.w <= 0 || s.h <= 0) {
+            this._masks[0].set_position(0, 0);
+            this._masks[0].set_size(b.w, b.h);
+            for (let i = 1; i < 4; i++) this._masks[i].hide();
+            return;
+        }
+        // 上方
+        this._masks[0].set_position(0, 0);
+        this._masks[0].set_size(b.w, Math.max(0, ly));
+        // 下方
+        this._masks[1].set_position(0, ly + s.h);
+        this._masks[1].set_size(b.w, Math.max(0, b.h - (ly + s.h)));
+        // 左方
+        this._masks[2].set_position(0, ly);
+        this._masks[2].set_size(Math.max(0, lx), s.h);
+        // 右方
+        this._masks[3].set_position(lx + s.w, ly);
+        this._masks[3].set_size(Math.max(0, b.w - (lx + s.w)), s.h);
+        for (let i = 0; i < 4; i++) this._masks[i].show();
+    }
+
+    _updateBorder() {
+        let s = this._normalizeSelection(this._sel);
+        if (s.w > 0 && s.h > 0) {
+            this._border.set_position(
+                s.x - this._bounds.x - 1,
+                s.y - this._bounds.y - 1);
+            this._border.set_size(s.w + 2, s.h + 2);
+            this._border.show();
+        } else {
+            this._border.hide();
+        }
+    }
+
+    _updateHandles() {
+        let r = this._normalizeSelection(this._sel);
+        if (r.w <= 0 || r.h <= 0) {
+            for (let h of this._handles) h.hide();
+            return;
+        }
+        let hw = 5; // half handle size
+        let lx = r.x - this._bounds.x, ly = r.y - this._bounds.y;
+        let cx = lx + r.w / 2, cy = ly + r.h / 2;
+        let pos = [
+            [lx - hw, ly - hw],
+            [cx - hw, ly - hw],
+            [lx + r.w - hw, ly - hw],
+            [lx + r.w - hw, cy - hw],
+            [lx + r.w - hw, ly + r.h - hw],
+            [cx - hw, ly + r.h - hw],
+            [lx - hw, ly + r.h - hw],
+            [lx - hw, cy - hw],
+        ];
+        for (let i = 0; i < 8; i++) {
+            this._handles[i].set_position(Math.round(pos[i][0]), Math.round(pos[i][1]));
+            this._handles[i].show();
+        }
+    }
+
+    _updateHintPos() {
+        let [minW, natW] = this._hint.get_preferred_width(-1);
+        let [minH, natH] = this._hint.get_preferred_height(-1);
+        let r = this._normalizeSelection(this._sel), b = this._bounds;
+
+        let x = r.x - b.x + (r.w - natW) / 2;
+        let y = r.y - b.y + r.h + 12;
+        if (y + natH > b.h)
+            y = r.y - b.y - natH - 12;
+        x = Math.round(Math.max(0, Math.min(x, b.w - natW)));
+        y = Math.round(Math.max(0, Math.min(y, b.h - natH)));
+
+        this._hint.set_position(x, y);
+        this._hint.show();
+        this._raiseInteractiveChrome();
+    }
+
+    _refreshUI() {
+        this._updateMasks();
+        this._updateBorder();
+        if (this._mode !== 'SELECTING' && this._mode !== 'INIT') {
+            this._updateHandles();
+            this._updateHintPos();
+        }
+        this._raiseInteractiveChrome();
+    }
+
+    // ── 事件 ──────────────────────────────────────────────────
+
+    _onCapturedEvent(actor, event) {
+        let type = event.type();
+        if (type === Clutter.EventType.KEY_PRESS)
+            return this._handleKeyEvent(event);
+
+        if (this._committing &&
+            (type === Clutter.EventType.MOTION ||
+             type === Clutter.EventType.BUTTON_PRESS ||
+             type === Clutter.EventType.BUTTON_RELEASE))
+            return Clutter.EVENT_STOP;
+
+        if (this._mode === 'SELECTED' && type === Clutter.EventType.MOTION) {
+            this._updateCursorAtPointer();
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        if (this._mode === 'SELECTING' ||
+            this._mode === 'MOVING' ||
+            this._mode === 'RESIZING') {
+            if (type === Clutter.EventType.MOTION)
+                return this._onMotion();
+            if (type === Clutter.EventType.BUTTON_RELEASE)
+                return this._onRelease();
+            if (type === Clutter.EventType.BUTTON_PRESS)
+                return this._onRelease();
+        }
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _onKeyPress(actor, event) {
+        return this._handleKeyEvent(event);
+    }
+
+    _handleKeyEvent(event) {
+        this._armCancelTimeout();
+        let key = event.get_key_symbol();
+        let ch = '';
+        try {
+            let unicode = event.get_key_unicode();
+            if (unicode)
+                ch = String.fromCodePoint(unicode).toLowerCase();
+        } catch (e) {
+            ch = '';
+        }
+
+        if (key === Clutter.KEY_Escape) {
+            this.destroy();
+            return Clutter.EVENT_STOP;
+        }
+        if (this._mode !== 'SELECTED')
+            return Clutter.EVENT_PROPAGATE;
+
+        if (key === Clutter.KEY_t || key === Clutter.KEY_T || ch === 't')
+            return this._commitFromKey('paste');
+        if (key === Clutter.KEY_c || key === Clutter.KEY_C || ch === 'c')
+            return this._commitFromKey('copy');
+        if (key === Clutter.KEY_s || key === Clutter.KEY_S || ch === 's')
+            return this._commitFromKey('save');
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _commitFromKey(action) {
+        if (this._committing)
+            return Clutter.EVENT_STOP;
+        this._commit(action);
+        return Clutter.EVENT_STOP;
+    }
+
+    _onCapturePress(actor, event) {
+        if (this._committing)
+            return Clutter.EVENT_STOP;
+        if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+            return Clutter.EVENT_PROPAGATE;
+
+        if (this._mode === 'SELECTING' ||
+            this._mode === 'MOVING' ||
+            this._mode === 'RESIZING')
+            return this._onRelease();
+
+        this._armCancelTimeout();
+
+        let [x, y] = event.get_coords();
+        let handleHit = this._hitHandle(x, y);
+        if (this._mode === 'SELECTED' && handleHit) {
+            this._beginResize(handleHit.signX, handleHit.signY, x, y);
+            return Clutter.EVENT_STOP;
+        }
+
+        // 已有选区 → 点击内部 = 移动
+        if (this._mode === 'SELECTED' && this._hitSel(x, y)) {
+            this._resetCursor();
+            this._mode = 'MOVING';
+            this._dragBaseX = x - this._sel.x;
+            this._dragBaseY = y - this._sel.y;
+            this._beginGrab();
+            return Clutter.EVENT_STOP;
+        }
+
+        // 其它情况 → 开始新框选
+        this._resetCursor();
+        this._mode = 'SELECTING';
+        this._selectStartX = x;
+        this._selectStartY = y;
+        this._sel = { x, y, w: 0, h: 0 };
+        this._border.hide();
+        for (let h of this._handles) h.hide();
+        this._hint.hide();
+        this._updateMasks();
+        this._beginGrab();
+        return Clutter.EVENT_STOP;
+    }
+
+    _onCaptureHover() {
+        if (this._committing ||
+            this._mode === 'SELECTING' ||
+            this._mode === 'MOVING' ||
+            this._mode === 'RESIZING')
+            return Clutter.EVENT_PROPAGATE;
+
+        this._updateCursorAtPointer();
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _onHandlePress(actor, event) {
+        if (this._committing)
+            return Clutter.EVENT_STOP;
+        if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+            return Clutter.EVENT_PROPAGATE;
+        this._armCancelTimeout();
+
+        let [x, y] = event.get_coords();
+        this._beginResize(actor._signX, actor._signY, x, y);
+        return Clutter.EVENT_STOP;
+    }
+
+    _beginResize(signX, signY, x, y) {
+        this._mode = 'RESIZING';
+        this._hSign = signX;
+        this._vSign = signY;
+        this._dragBaseX = x;
+        this._dragBaseY = y;
+        this._dragStartSel = { ...this._sel };
+        this._setResizeCursor(signX, signY);
+        this._beginGrab();
+    }
+
+    _beginGrab() {
+        if (!this._dragGrab) {
+            try {
+                this._dragGrab = global.stage.grab(this._root);
+            } catch (e) {
+                log('[float-sticker] drag grab failed: ' + e);
+            }
+        }
+        if (!this._motionId) {
+            this._motionId = this._root.connect('motion-event',
+                this._onMotion.bind(this));
+        }
+        if (!this._releaseId) {
+            this._releaseId = this._root.connect('button-release-event',
+                this._onRelease.bind(this));
+        }
+    }
+
+    _endGrab() {
+        if (this._motionId) { this._root.disconnect(this._motionId); this._motionId = null; }
+        if (this._releaseId) { this._root.disconnect(this._releaseId); this._releaseId = null; }
+        if (this._dragGrab) {
+            this._dragGrab.dismiss();
+            this._dragGrab = null;
+        }
+    }
+
+    _onMotion() {
+        if (this._committing)
+            return Clutter.EVENT_STOP;
+        this._armCancelTimeout();
+        let [x, y] = global.get_pointer();
+
+        if (this._mode === 'SELECTING') {
+            let sx = this._selectStartX, sy = this._selectStartY;
+            this._sel = this._normalizeSelection({
+                x: Math.min(sx, x),
+                y: Math.min(sy, y),
+                w: Math.abs(x - sx),
+                h: Math.abs(y - sy),
+            });
+            this._updateMasks();
+            this._updateBorder();
+        } else if (this._mode === 'MOVING') {
+            this._sel.x = x - this._dragBaseX;
+            this._sel.y = y - this._dragBaseY;
+            this._sel = this._clampSelection(this._sel);
+            this._refreshUI();
+        } else if (this._mode === 'RESIZING') {
+            let dx = x - this._dragBaseX;
+            let dy = y - this._dragBaseY;
+            this._sel = this._resizeSelection(this._dragStartSel, dx, dy);
+            this._refreshUI();
+        }
+        return Clutter.EVENT_STOP;
+    }
+
+    _onRelease() {
+        if (this._committing)
+            return Clutter.EVENT_STOP;
+        this._endGrab();
+        this._armCancelTimeout();
+        if (this._mode === 'SELECTING') {
+            if (this._sel.w < MIN_SEL && this._sel.h < MIN_SEL) {
+                this._mode = 'INIT';
+                this._sel = { x: 0, y: 0, w: 0, h: 0 };
+                this._border.hide();
+                this._hint.set_text('拖拽框选截图区域，Esc 取消');
+                this._hint.show();
+                this._updateMasks();
+            } else {
+                this._sel = this._normalizeSelection(this._sel);
+                this._mode = 'SELECTED';
+                this._hint.set_text('T 贴屏幕   C 复制   S 保存   Esc 取消');
+                this._refreshUI();
+                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    if (!this._destroyed && this._mode === 'SELECTED')
+                        this._updateHintPos();
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+        } else if (this._mode === 'MOVING' || this._mode === 'RESIZING') {
+            this._sel = this._normalizeSelection(this._sel);
+            this._mode = 'SELECTED';
+            this._resetCursor();
+            this._hint.set_text('T 贴屏幕   C 复制   S 保存   Esc 取消');
+            this._updateHintPos();
+        }
+        return Clutter.EVENT_STOP;
+    }
+
+    _hitSel(x, y) {
+        let s = this._normalizeSelection(this._sel);
+        return x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h;
+    }
+
+    _hitHandle(x, y) {
+        let r = this._normalizeSelection(this._sel);
+        if (r.w <= 0 || r.h <= 0)
+            return null;
+
+        let cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+        let handles = [
+            [r.x, r.y, -1, -1],
+            [cx, r.y, 0, -1],
+            [r.x + r.w, r.y, 1, -1],
+            [r.x + r.w, cy, 1, 0],
+            [r.x + r.w, r.y + r.h, 1, 1],
+            [cx, r.y + r.h, 0, 1],
+            [r.x, r.y + r.h, -1, 1],
+            [r.x, cy, -1, 0],
+        ];
+        const HIT = 10;
+        for (let [hx, hy, signX, signY] of handles) {
+            if (Math.abs(x - hx) <= HIT && Math.abs(y - hy) <= HIT)
+                return { signX, signY };
+        }
+        return null;
+    }
+
+    _normalizeSelection(sel) {
+        let b = this._bounds;
+        let x1 = Math.min(sel.x, sel.x + sel.w);
+        let y1 = Math.min(sel.y, sel.y + sel.h);
+        let x2 = Math.max(sel.x, sel.x + sel.w);
+        let y2 = Math.max(sel.y, sel.y + sel.h);
+
+        x1 = Math.max(b.x, Math.min(x1, b.x + b.w));
+        y1 = Math.max(b.y, Math.min(y1, b.y + b.h));
+        x2 = Math.max(b.x, Math.min(x2, b.x + b.w));
+        y2 = Math.max(b.y, Math.min(y2, b.y + b.h));
+
+        return {
+            x: x1,
+            y: y1,
+            w: Math.max(0, x2 - x1),
+            h: Math.max(0, y2 - y1),
+        };
+    }
+
+    _clampSelection(sel) {
+        let b = this._bounds;
+        let s = this._normalizeSelection(sel);
+        s.x = Math.max(b.x, Math.min(s.x, b.x + b.w - s.w));
+        s.y = Math.max(b.y, Math.min(s.y, b.y + b.h - s.h));
+        return s;
+    }
+
+    _resizeSelection(startSel, dx, dy) {
+        let b = this._bounds;
+        let s = this._normalizeSelection(startSel);
+        let left = s.x;
+        let top = s.y;
+        let right = s.x + s.w;
+        let bottom = s.y + s.h;
+
+        if (this._hSign < 0)
+            left = Math.max(b.x, Math.min(left + dx, right - MIN_SEL));
+        else if (this._hSign > 0)
+            right = Math.min(b.x + b.w, Math.max(right + dx, left + MIN_SEL));
+
+        if (this._vSign < 0)
+            top = Math.max(b.y, Math.min(top + dy, bottom - MIN_SEL));
+        else if (this._vSign > 0)
+            bottom = Math.min(b.y + b.h, Math.max(bottom + dy, top + MIN_SEL));
+
+        return {
+            x: left,
+            y: top,
+            w: right - left,
+            h: bottom - top,
+        };
+    }
+
+    _updateCursorAtPointer() {
+        let [x, y] = global.get_pointer();
+        let handleHit = this._hitHandle(x, y);
+        if (handleHit)
+            this._setResizeCursor(handleHit.signX, handleHit.signY);
+        else
+            this._resetCursor();
+    }
+
+    _setResizeCursor(signX, signY) {
+        let cursor = null;
+        if (signX === 0)
+            cursor = Meta.Cursor.NORTH_RESIZE;
+        else if (signY === 0)
+            cursor = Meta.Cursor.EAST_RESIZE;
+        else if (signX === signY)
+            cursor = Meta.Cursor.NW_RESIZE;
+        else
+            cursor = Meta.Cursor.NE_RESIZE;
+
+        if (this._cursor === cursor)
+            return;
+
+        try {
+            global.display.set_cursor(cursor);
+            this._cursor = cursor;
+        } catch (e) {
+            log('[float-sticker] set cursor failed: ' + e);
+        }
+    }
+
+    _resetCursor() {
+        if (!this._cursor)
+            return;
+        try {
+            global.display.set_cursor(Meta.Cursor.DEFAULT);
+        } catch (e) {
+            log('[float-sticker] reset cursor failed: ' + e);
+        }
+        this._cursor = null;
+    }
+
+    _raiseInteractiveChrome() {
+        let parent = this._root;
+        if (!parent)
+            return;
+
+        parent.set_child_above_sibling(this._capture, null);
+        if (this._masks) {
+            for (let m of this._masks)
+                parent.set_child_above_sibling(m, null);
+        }
+        if (this._border)
+            parent.set_child_above_sibling(this._border, null);
+        if (this._handles) {
+            for (let h of this._handles)
+                parent.set_child_above_sibling(h, null);
+        }
+        if (this._hint)
+            parent.set_child_above_sibling(this._hint, null);
+    }
+
+    _armCancelTimeout() {
+        if (this._cancelTimeoutId) {
+            GLib.Source.remove(this._cancelTimeoutId);
+            this._cancelTimeoutId = 0;
+        }
+        this._cancelTimeoutId = GLib.timeout_add_seconds(
+            GLib.PRIORITY_DEFAULT, 180, () => {
+                this._cancelTimeoutId = 0;
+                log('[float-sticker] snip overlay auto-cancelled after timeout');
+                this.destroy();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    // ── 提交 ──────────────────────────────────────────────────
+
+    _commit(action) {
+        if (this._committing)
+            return;
+        this._committing = true;
+        this._hint.set_text('正在处理截图...');
+        this._hint.show();
+        this._raiseInteractiveChrome();
+
+        let r = this._normalizeSelection(this._sel);
+        let x = Math.round(r.x), y = Math.round(r.y);
+        let w = Math.round(r.w), h = Math.round(r.h);
+        log(`[float-sticker] snip commit ${action}: x=${x} y=${y} w=${w} h=${h}`);
+        let tmpPath = GLib.build_filenamev([
+            GLib.get_tmp_dir(), `float-sticker-ss-${Date.now()}.png`]);
+        this._commitTimeoutId = GLib.timeout_add_seconds(
+            GLib.PRIORITY_DEFAULT, 10, () => {
+                this._commitTimeoutId = 0;
+                Main.notify('截图失败', '截图处理超时');
+                this.destroy();
+                return GLib.SOURCE_REMOVE;
+            });
+
+        let screenshot = null;
+        try {
+            screenshot = new Shell.Screenshot();
+        } catch (e) {
+            log('[float-sticker] Shell.Screenshot construct failed: ' + e);
+            Main.notify('截图失败', '无法初始化截图服务');
+            this.destroy();
+            return;
+        }
+
+        let file = Gio.File.new_for_path(tmpPath);
+        let stream = null;
+        try {
+            stream = file.replace(
+                null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        } catch (e) {
+            log('[float-sticker] create screenshot stream failed: ' + e);
+            Main.notify('截图失败', '无法创建临时截图文件');
+            this.destroy();
+            return;
+        }
+
+        if (this._root)
+            this._root.hide();
+
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            if (this._destroyed)
+                return GLib.SOURCE_REMOVE;
+
+            screenshot.screenshot_area(x, y, w, h, stream, (src, res) => {
+                let filename = null;
+                try {
+                    let [success] = screenshot.screenshot_area_finish(res);
+                    stream.close(null);
+                    if (success)
+                        filename = tmpPath;
+                } catch (e) {
+                    log('[float-sticker] screenshot_area failed: ' + e);
+                    try {
+                        stream.close(null);
+                    } catch (closeError) {
+                        log('[float-sticker] close screenshot stream failed: ' + closeError);
+                    }
+                }
+
+                if (!filename) {
+                    Main.notify('截图失败', '无法截取选区');
+                    this.destroy();
+                    return;
+                }
+
+                let pixbuf = null;
+                try {
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file(filename);
+                    let f = Gio.File.new_for_path(filename);
+                    f.delete(null);
+                } catch (e) {
+                    log('[float-sticker] load screenshot failed: ' + e);
+                }
+
+                if (!pixbuf) {
+                    Main.notify('截图失败', '无法读取截图文件');
+                    this.destroy();
+                    return;
+                }
+
+                try {
+                    if (action === 'paste') {
+                        // Image stickers have 3px padding; offset the actor so
+                        // the captured pixels line up with the selected area.
+                        _widgets.push(new StickerWidget(
+                            { kind: 'image', pixbuf },
+                            Math.round(r.x - 4),
+                            Math.round(r.y - 4)));
+                    } else if (action === 'copy') {
+                        let [ok, buf] = pixbuf.save_to_bufferv('png', [], []);
+                        if (ok) {
+                            St.Clipboard.get_default().set_content(
+                                St.ClipboardType.CLIPBOARD, 'image/png',
+                                GLib.Bytes.new(buf));
+                            Main.notify('截图已复制', '已写入剪贴板');
+                        }
+                    } else if (action === 'save') {
+                        let pics = GLib.get_user_special_dir(
+                            GLib.UserDirectory.DIRECTORY_PICTURES);
+                        if (!pics)
+                            pics = GLib.build_filenamev([GLib.get_home_dir(), 'Pictures']);
+                        GLib.mkdir_with_parents(pics, 0o755);
+                        let ts = new Date().toISOString()
+                            .replace(/[:.]/g, '-').slice(0, 19);
+                        let savePath = GLib.build_filenamev(
+                            [pics, `Screenshot_${ts}.png`]);
+                        pixbuf.savev(savePath, 'png', [], []);
+                        Main.notify('截图已保存', savePath);
+                    }
+                } catch (e) {
+                    log('[float-sticker] commit error: ' + e);
+                    Main.notify('截图处理失败', String(e));
+                }
+
+                this.destroy();
+            }, null);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    // ── 销毁 ──────────────────────────────────────────────────
+
+    destroy() {
+        if (this._destroyed)
+            return;
+        this._destroyed = true;
+        this._endGrab();
+        this._resetCursor();
+        if (this._cancelTimeoutId) {
+            GLib.Source.remove(this._cancelTimeoutId);
+            this._cancelTimeoutId = 0;
+        }
+        if (this._commitTimeoutId) {
+            GLib.Source.remove(this._commitTimeoutId);
+            this._commitTimeoutId = 0;
+        }
+        if (this._capturedEventId) {
+            global.stage.disconnect(this._capturedEventId);
+            this._capturedEventId = 0;
+        }
+        if (this._modalGrab) {
+            Main.popModal(this._modalGrab);
+            this._modalGrab = null;
+        }
+        if (this._root) {
+            Main.layoutManager.removeChrome(this._root);
+            this._root.destroy();
+            this._root = null;
+        }
+        this._actors = [];
+        if (_activeSnip === this) _activeSnip = null;
+    }
+}
+
+function _startScreenshot() {
+    if (_activeSnip) return;
+    _activeSnip = new SnipSelection();
+}
+
 function _spawn(content) {
     let m = Main.layoutManager.primaryMonitor;
     let off = _widgets.length * 30;
@@ -359,20 +1160,32 @@ function _pasteToScreen() {
 
 export default class FloatStickerExtension extends Extension {
     enable() {
-        _keybindingId = Main.wm.addKeybinding(
+        _pasteKeybindingId = Main.wm.addKeybinding(
             'paste-to-screen',
             this.getSettings('org.gnome.shell.extensions.float-sticker'),
             Meta.KeyBindingFlags.NONE,
             Shell.ActionMode.NORMAL,
             _pasteToScreen
         );
+        _screenshotKeybindingId = Main.wm.addKeybinding(
+            'screenshot-to-screen',
+            this.getSettings('org.gnome.shell.extensions.float-sticker'),
+            Meta.KeyBindingFlags.NONE,
+            Shell.ActionMode.NORMAL,
+            _startScreenshot
+        );
     }
 
     disable() {
-        if (_keybindingId) {
+        if (_pasteKeybindingId) {
             Main.wm.removeKeybinding('paste-to-screen');
-            _keybindingId = null;
+            _pasteKeybindingId = null;
         }
+        if (_screenshotKeybindingId) {
+            Main.wm.removeKeybinding('screenshot-to-screen');
+            _screenshotKeybindingId = null;
+        }
+        if (_activeSnip) _activeSnip.destroy();
         while (_widgets.length)
             _widgets[0].destroy();
     }

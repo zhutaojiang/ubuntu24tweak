@@ -5,5 +5,9 @@
       <default>['F3']</default>
       <summary>将剪切板内容贴到屏幕</summary>
     </key>
+    <key name="screenshot-to-screen" type="as">
+      <default>['&lt;Control&gt;F1']</default>
+      <summary>截图贴屏（框选区域）</summary>
+    </key>
   </schema>
 </schemalist>

@@ -1,7 +1,7 @@
 {
     "uuid": "float-sticker@ubuntu24tweak",
     "name": "Float Sticker",
-    "description": "F3 将剪切板内容贴到屏幕上，置顶浮动。右键重新复制，双击销毁，拖动移动，滚动缩放。",
+    "description": "F3 将剪贴板内容贴屏（文本/图片）。Ctrl+F1 截图贴屏，框选后可直接贴屏/复制/保存，贴纸可拖拽/缩放/双击销毁。",
     "shell-version": ["46"],
     "url": "",
     "version": 1
