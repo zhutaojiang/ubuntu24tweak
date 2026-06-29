@@ -1,4 +1,14 @@
-- [/] dophin 文件管理，右侧预览区域，能否自动显示docx/excel/pdf/txt/md等文件内容，像图片那样 @done(2026-06-27)
+- [x] 本机wezterm窗格的分隔线不明显，与app内的长线段基本一致，请修改为更醒目的分隔线 @done(2026-06-30)
+    [2026-06-30] WezTerm 的 `colors.split` 只渲染"活跃窗格那一侧"的边框，非活跃侧仍为默认灰。
+      这是 WezTerm 自身限制，无法同时自定义两侧颜色。已将 `~/.config/wezterm/wezterm.lua`
+      的 `colors.split` 改为 `#00FFFF`（青色），在暗色背景下比默认 `#444444` 醒目得多。
+      实际操作时焦点在哪侧，哪侧边框就是青色，非活跃侧灰色不影响使用体验。
+    [2026-06-30] 复测 window_padding 方案：实测 `window_background_gradient` 涂的是**整个窗口背景**，
+      不是只涂 padding 区。要让外缘单色、内部正常，必须给 cell 区设不透明 `colors.background`
+      才能盖住 gradient —— 但 window_padding 只在窗口四周留 2px 边距、不在 pane 之间留间隙，
+      pane 间的 1px 边界仍是独立的 `colors.split`，外缘和分隔线不连续、视觉更乱。
+      决定：放弃 window_padding，维持原 `colors.split = '#00FFFF'` 的"活跃侧亮"妥协。
+- [x] dophin 文件管理，右侧预览区域，能否自动显示docx/excel/pdf/txt/md等文件内容，像图片那样 @done(2026-06-27)
     [2026-06-27] 结论：Dolphin 23.08 右侧信息面板只走 KIO 缩略图预览，不是完整文档阅读器；图片会显得像内容预览，
       但 docx/xlsx/pdf/txt/md 通常只能显示第一页、封面或文本开头，不能在面板内翻页/滚动/编辑。本机已有
       `gsthumbnail.so`(PDF)、`opendocumentthumbnail.so`(docx/xlsx/pptx)、`textthumbnail.so`(txt)；
